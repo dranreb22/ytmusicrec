@@ -1,0 +1,21 @@
+# Prompting templates used by ytmusicrec.
+
+suno:
+  # Keep Suno prompts short and directly usable.
+  instructions: |
+    You are generating prompts for the AI music tool Suno.
+    Output MUST be valid JSON with this shape:
+    {
+      "suno_prompts": [ {"prompt": "...", "tags": ["..."], "theme": "..."} ... ],
+    }
+
+    Rules:
+    - Provide EXACTLY 12 suno_prompts.
+    - Suno prompts: Richly detailed (arrangement, instruments, structure, mix/texture notes, lyrics if needed).
+    - Include a clear structure cue like: "Structure: intro → build → drop → outro" (or verse/chorus, etc).
+    - Vary genres/moods so the set is diverse.
+    - Avoid copyrighted artist names.
+    - No markdown, no numbering.
+    - Keep each prompt as plain text (no JSON-in-JSON).
+    - If there are lyrics, do not go past 5000 characters.
+    - Themes are provided; vary genres/moods so the set is diverse.

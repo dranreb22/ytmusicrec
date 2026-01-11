@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# venvs
+.venv/
+venv/
+
+# Airflow runtime
+airflow/logs/
+airflow/dags/__pycache__/
+airflow/plugins/__pycache__/
+airflow/.env
+airflow/.venv/
+airflow/airflow.db
+
+# Outputs
+output/
+*.csv
+*.md
+
+# Secrets
+secrets/
+*.env
+.env
+airflow/.env
+**/config/*.json
+**/config/*token*.json
+**/config/*secret*.json
+**/config/*.pem
+**/config/*.key
+**/config/*.p12
+
+# OAuth tokens
+google_token.json
+google_oauth_client.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+desktop.ini

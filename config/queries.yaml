@@ -1,0 +1,30 @@
+# ytmusicrec - YouTube query configuration
+#
+# NOTES
+# - quota-friendly by design: keep max_results_per_query small (25-50)
+# - days_back controls publishedAfter filter (recent content)
+
+region_code: US
+relevance_language: en
+
+# Only consider videos published within the last N days
+days_back: 7
+
+# How many search results to pull per query per run
+max_results_per_query: 25
+
+# Optional: If true, we also request "videos" stats for each result id (recommended)
+fetch_video_statistics: true
+
+# Queries. "name" becomes your initial theme bucket.
+queries:
+  - name: "Cyberpunk Synthwave"
+    q: "cyberpunk synthwave mix"
+  - name: "Dark Phonk"
+    q: "dark phonk mix"
+  - name: "Lo-fi Study"
+    q: "lofi study beats"
+  - name: "Epic Orchestral"
+    q: "epic orchestral trailer music"
+  - name: "Chill Gaming"
+    q: "chill gaming background music"
