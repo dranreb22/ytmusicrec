@@ -22,7 +22,6 @@ airflow/airflow.db
 # Outputs
 output/
 *.csv
-*.md
 
 # Secrets
 secrets/
@@ -45,3 +44,4 @@ google_oauth_client.json
 Thumbs.db
 
 desktop.ini
+.git
