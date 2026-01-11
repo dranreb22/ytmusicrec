@@ -6,7 +6,71 @@ Daily YouTube-driven AI music prompt recommender.
 - LLM: **Ollama** on Windows host (model: `llama3.1:8b`)
 - Datastore: **Host SQL Server Express** (SQL Auth)
 - Outputs: Discord webhook + local markdown (repo + Desktop) + Google Sheets
-- Quickstart Once Setup: run powershell script runytmusic.ps1 on system start.
+- Quickstart Once Setup: run powershell script `runytmusic.ps1` on system start.
+
+---
+
+## License
+This project is licensed under the **GNU Affero General Public License v3.0**.
+
+---
+
+## How it works (high level)
+
+Each day, the system:
+
+1. Pulls **recent YouTube videos** for configured search queries
+2. Stores videos + engagement metrics in SQL Server
+3. Scores themes based on **relative popularity & velocity**
+4. Uses a **local LLM (Ollama)** to generate AI music prompts
+5. Publishes outputs to:
+   - Markdown files
+   - Discord
+   - Google Sheets
+
+Airflow orchestrates this pipeline on a **daily schedule**.
+
+---
+
+## How “learning” works (important)
+
+This project does **not train a model**.
+
+Instead, it *learns* in a **data-driven way**:
+
+- Every day’s videos are stored in SQL (`dbo.Videos`)
+- Themes are re-scored daily based on:
+  - View count
+  - Like count
+  - Comment count
+  - Freshness window (`days_back`)
+- The LLM receives **today’s top themes** as structured context
+
+This creates **emergent adaptation**:
+- Trends rise/fall naturally
+- Prompts change as YouTube behavior changes
+- No fine-tuning required
+
+## Day-to-day tracking (how dates work)
+
+- Each run is tied to a **run_date** (YYYY-MM-DD)
+- Stored in:
+  - `dbo.Runs`
+  - `dbo.DailyThemes`
+  - `dbo.DailyPrompts`
+- Airflow provides the date automatically
+- Manual runs still resolve a correct run_date
+
+You can re-run a day safely:
+- Videos are upserted
+- Themes are merged
+- Prompts are deleted + regenerated for that date
+
+Download and install: https://ollama.com
+From PowerShell:
+- ollama serve
+- ollama pull llama3.1:8b
+
 
 ## Setup
 
@@ -135,3 +199,5 @@ docker compose logs -f airflow-worker
 
 ## Troubleshooting
 See `docs/troubleshooting.md`. 
+
+
