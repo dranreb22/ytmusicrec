@@ -45,6 +45,8 @@ def search_videos(
     }
 
     r = requests.get(url, params=params, timeout=30)
+    if r.status_code != 200:
+        log.error("YouTube API error %s: %s", r.status_code, r.text[:2000])
     r.raise_for_status()
     data = r.json()
 
@@ -74,7 +76,10 @@ def fetch_video_details(*, api_key: str, video_ids: list[str]) -> list[dict[str,
             "maxResults": len(chunk),
         }
         r = requests.get(url, params=params, timeout=30)
+            
         r.raise_for_status()
+        if r.status_code != 200:
+            log.error("YouTube API error %s: %s", r.status_code, r.text[:2000])
         data = r.json()
         out.extend(data.get("items", []))
 

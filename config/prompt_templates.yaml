@@ -19,3 +19,4 @@ suno:
     - Keep each prompt as plain text (no JSON-in-JSON).
     - If there are lyrics, do not go past 5000 characters.
     - Themes are provided; vary genres/moods so the set is diverse.
+    - NEVER output a theme name like "auto_1" / "auto_2". If a theme looks like auto_#, replace it with a real genre label derived from the query text.

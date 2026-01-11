@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import math
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any
 
 
@@ -67,3 +67,49 @@ def score_themes_by_query(videos: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
     themes.sort(key=lambda x: x["score"], reverse=True)
     return themes
+
+from datetime import date, timedelta
+from typing import Any
+
+def compute_theme_trends(*, run_date: date, today_themes: list[dict[str, Any]], history_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    history_rows: rows of {run_date, theme, score} for the last ~7 days including yesterday.
+    """
+    # index history: theme -> date -> score
+    by_theme: dict[str, dict[date, float]] = {}
+    for r in history_rows:
+        d = r["run_date"]
+        if isinstance(d, str):
+            d = date.fromisoformat(d)
+        by_theme.setdefault(r["theme"], {})[d] = float(r["score"])
+
+    yesterday = run_date - timedelta(days=1)
+    start_7d = run_date - timedelta(days=7)
+
+    trends: list[dict[str, Any]] = []
+    for t in today_themes:
+        theme = t["theme"]
+        score = float(t["score"])
+
+        hist = by_theme.get(theme, {})
+        prev = hist.get(yesterday)
+
+        # average across last 7 days prior to today
+        vals = [v for d, v in hist.items() if start_7d <= d < run_date]
+        avg_7d = (sum(vals) / len(vals)) if vals else None
+
+        delta_1d = (score - prev) if prev is not None else None
+        momentum = (score - avg_7d) if avg_7d is not None else None
+
+        trends.append(
+            {
+                "theme": theme,
+                "score": score,
+                "prev_score": prev,
+                "delta_1d": delta_1d,
+                "avg_7d": avg_7d,
+                "momentum": momentum,
+            }
+        )
+
+    return trends

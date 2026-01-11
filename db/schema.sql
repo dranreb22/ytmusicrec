@@ -86,3 +86,56 @@ BEGIN
     CONSTRAINT PK_QueryCache PRIMARY KEY (run_date, region_code, query_name)
   );
 END
+
+-- Tracks per-day momentum stats for each theme
+IF OBJECT_ID('dbo.DailyThemeTrends', 'U') IS NULL
+BEGIN
+  CREATE TABLE dbo.DailyThemeTrends (
+    run_date DATE NOT NULL,
+    theme NVARCHAR(200) NOT NULL,
+    score FLOAT NOT NULL,
+    prev_score FLOAT NULL,
+    delta_1d FLOAT NULL,
+    avg_7d FLOAT NULL,
+    momentum FLOAT NULL,
+    computed_at DATETIME2 NOT NULL CONSTRAINT DF_DailyThemeTrends_computed_at DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT PK_DailyThemeTrends PRIMARY KEY (run_date, theme)
+  );
+END
+
+GO
+
+-- Tracks per-query performance so tomorrow can choose better queries
+IF OBJECT_ID('dbo.DailyQueryStats', 'U') IS NULL
+BEGIN
+  CREATE TABLE dbo.DailyQueryStats (
+    run_date DATE NOT NULL,
+    region_code NVARCHAR(10) NOT NULL,
+    query_name NVARCHAR(200) NOT NULL,
+    q NVARCHAR(400) NOT NULL,
+    video_count INT NOT NULL,
+    total_views BIGINT NULL,
+    total_likes BIGINT NULL,
+    total_comments BIGINT NULL,
+    computed_at DATETIME2 NOT NULL CONSTRAINT DF_DailyQueryStats_computed_at DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT PK_DailyQueryStats PRIMARY KEY (run_date, region_code, query_name)
+  );
+END
+GO
+
+-- Helps prompt evolution: avoid repeats / measure novelty over time
+IF OBJECT_ID('dbo.DailyPromptHistory', 'U') IS NULL
+BEGIN
+  CREATE TABLE dbo.DailyPromptHistory (
+    run_date DATE NOT NULL,
+    tool NVARCHAR(50) NOT NULL,
+    prompt NVARCHAR(1000) NOT NULL,
+    prompt_hash VARBINARY(32) NOT NULL, -- SHA2_256
+    theme_tags NVARCHAR(400) NULL,
+    created_at DATETIME2 NOT NULL CONSTRAINT DF_DailyPromptHistory_created_at DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT PK_DailyPromptHistory PRIMARY KEY (run_date, tool, prompt_hash)
+  );
+
+  CREATE INDEX IX_DailyPromptHistory_ToolDate ON dbo.DailyPromptHistory (tool, run_date);
+END
+GO

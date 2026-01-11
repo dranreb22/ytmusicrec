@@ -8,7 +8,7 @@ region_code: US
 relevance_language: en
 
 # Only consider videos published within the last N days
-days_back: 7
+days_back: 5
 
 # How many search results to pull per query per run
 max_results_per_query: 25
@@ -28,3 +28,46 @@ queries:
     q: "epic orchestral trailer music"
   - name: "Chill Gaming"
     q: "chill gaming background music"
+
+  - name: "Drum & Bass"
+    q: "drum and bass mix"
+  - name: "Liquid DnB"
+    q: "liquid drum and bass mix"
+  - name: "Future Bass"
+    q: "future bass mix"
+  - name: "EDM Festival"
+    q: "edm festival mix"
+  - name: "Melodic Techno"
+    q: "melodic techno mix"
+  - name: "Deep House"
+    q: "deep house mix"
+  - name: "Trance"
+    q: "uplifting trance mix"
+
+  - name: "Ambient Soundscape"
+    q: "ambient soundscape music"
+  - name: "Dark Ambient"
+    q: "dark ambient soundtrack"
+  - name: "Cinematic Tension"
+    q: "cinematic tension music"
+  - name: "Emotional Piano"
+    q: "emotional piano instrumental"
+
+  - name: "Anime EDM"
+    q: "anime edm mix"
+  - name: "J-Pop Remix"
+    q: "jpop remix mix"
+  - name: "K-Pop Instrumental"
+    q: "kpop instrumental mix"
+
+  - name: "Trap Instrumental"
+    q: "trap instrumental mix"
+  - name: "Boom Bap"
+    q: "boom bap instrumental"
+
+feedback_loop:
+  enabled: true
+  lookback_days: 7
+  max_queries: 5
+  theme_query_prefix: "music"
+  theme_query_count: 2

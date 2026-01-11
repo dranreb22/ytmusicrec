@@ -1,17 +1,22 @@
 from __future__ import annotations
 
 import logging
+import hashlib
+import json
+import pyodbc
+import re
 from dataclasses import dataclass
 from datetime import datetime, date
 from pathlib import Path
 from typing import Iterable, Any
 
-import json
-import pyodbc
+
 
 from ytmusicrec.settings import Settings
 
 log = logging.getLogger(__name__)
+_GO_SPLIT_RE = re.compile(r"^\s*GO\s*$", re.IGNORECASE | re.MULTILINE)
+
 
 
 def _conn_str(s: Settings) -> str:
@@ -35,14 +40,23 @@ def connect(s: Settings) -> pyodbc.Connection:
 
 
 def ensure_schema(conn: pyodbc.Connection) -> None:
-    """Create required tables if they do not exist (idempotent)."""
+    """Create required tables if they do not exist (idempotent).
+
+    schema.sql may contain SSMS batch separators (GO). pyodbc cannot execute those directly,
+    so we split into batches and execute sequentially.
+    """
     sql = Path(__file__).resolve().parents[1] / "db" / "schema.sql"
     if not sql.exists():
-        # fallback: schema file lives at repo_root/db/schema.sql
         sql = Path("/opt/ytmusicrec/db/schema.sql")
+
     ddl = sql.read_text(encoding="utf-8")
+
+    # Split on lines that are exactly "GO" (ignoring whitespace/case)
+    batches = [b.strip() for b in _GO_SPLIT_RE.split(ddl) if b.strip()]
+
     cur = conn.cursor()
-    cur.execute(ddl)
+    for batch in batches:
+        cur.execute(batch)
     conn.commit()
 
 
@@ -289,3 +303,104 @@ def set_cached_video_ids(conn: pyodbc.Connection, run_date_: date, region_code: 
         run_date_, region_code, query_name, q, json.dumps(ids), fetched_at,
     )
     conn.commit()
+
+def write_daily_theme_trends(conn: pyodbc.Connection, run_date_: date, trends: list[dict[str, Any]]) -> None:
+    cur = conn.cursor()
+    cur.execute("DELETE FROM dbo.DailyThemeTrends WHERE run_date = ?", run_date_)
+    ins = """
+    INSERT INTO dbo.DailyThemeTrends (run_date, theme, score, prev_score, delta_1d, avg_7d, momentum)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    """
+    for t in trends:
+        cur.execute(
+            ins,
+            run_date_,
+            t["theme"],
+            float(t["score"]),
+            t.get("prev_score"),
+            t.get("delta_1d"),
+            t.get("avg_7d"),
+            t.get("momentum"),
+        )
+    conn.commit()
+
+def fetch_daily_themes_range(conn: pyodbc.Connection, start_date: date, end_date: date) -> list[dict[str, Any]]:
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT run_date, theme, score
+        FROM dbo.DailyThemes
+        WHERE run_date >= ? AND run_date <= ?
+        """,
+        start_date,
+        end_date,
+    )
+    cols = [c[0] for c in cur.description]
+    return [{cols[i]: row[i] for i in range(len(cols))} for row in cur.fetchall()]
+
+def _prompt_hash(prompt: str) -> bytes:
+    return hashlib.sha256(prompt.strip().encode("utf-8")).digest()
+
+def fetch_recent_prompt_hashes(conn: pyodbc.Connection, tool: str, since_date: date) -> set[bytes]:
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT prompt_hash
+        FROM dbo.DailyPromptHistory
+        WHERE tool = ? AND run_date >= ?
+        """,
+        tool,
+        since_date,
+    )
+    return {row[0] for row in cur.fetchall()}
+
+def write_prompt_history(conn: pyodbc.Connection, run_date_: date, tool: str, prompts: list[dict[str, Any]]) -> None:
+    cur = conn.cursor()
+    ins = """
+    INSERT INTO dbo.DailyPromptHistory (run_date, tool, prompt, prompt_hash, theme_tags)
+    VALUES (?, ?, ?, ?, ?)
+    """
+    for p in prompts:
+        prompt = (p.get("prompt") or "").strip()
+        if not prompt:
+            continue
+        cur.execute(ins, run_date_, tool, prompt, _prompt_hash(prompt), p.get("theme_tags"))
+    conn.commit()
+
+def write_daily_query_stats(conn: pyodbc.Connection, run_date_: date, region_code: str, rows: list[dict[str, Any]]) -> None:
+    cur = conn.cursor()
+    cur.execute("DELETE FROM dbo.DailyQueryStats WHERE run_date = ? AND region_code = ?", run_date_, region_code)
+
+    ins = """
+    INSERT INTO dbo.DailyQueryStats
+      (run_date, region_code, query_name, q, video_count, total_views, total_likes, total_comments)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """
+    for r in rows:
+        cur.execute(
+            ins,
+            run_date_,
+            region_code,
+            r["query_name"],
+            r["q"],
+            int(r["video_count"]),
+            r.get("total_views"),
+            r.get("total_likes"),
+            r.get("total_comments"),
+        )
+    conn.commit()
+
+def fetch_top_queries(conn: pyodbc.Connection, region_code: str, since_date: date, limit: int = 5) -> list[str]:
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT TOP (?) q
+        FROM dbo.DailyQueryStats
+        WHERE region_code = ? AND run_date >= ?
+        ORDER BY ISNULL(total_views, 0) DESC, video_count DESC
+        """,
+        limit,
+        region_code,
+        since_date,
+    )
+    return [row[0] for row in cur.fetchall()]
